@@ -1,36 +1,65 @@
 import 'isomorphic-fetch'
 import Layout from '../components/Layout'
 import ChannelGrid from "../components/ChannelGrid";
-import PodcastList from "../components/PodcastList";
+import PodcastList2 from "../components/PodcastList2";
+import Error from "./_error";
 
 export default class extends React.Component {
-
-    static async getInitialProps({query}) {
-        let idChannel = query.id;
-
-        let [reqChannel, reqAudio, reqSeries] = await Promise.all([
-            fetch(`https://api.audioboom.com/channels/${idChannel}`),
-            fetch(`https://api.audioboom.com/channels/${idChannel}/audio_clips`),
-            fetch(`https://api.audioboom.com/channels/${idChannel}/child_channels`)
-        ]);
-
-        let dataChannel = await reqChannel.json();
-        let channel = dataChannel.body.channel;
-
-        let dataAudios = await reqAudio.json();
-        let audioClips = dataAudios.body.audio_clips;
-
-        let dataSeries = await reqSeries.json();
-        let series = dataSeries.body.channels;
-
-        return {channel, audioClips, series}
+    constructor(props) {
+        super(props);
+        this.state = {
+            openPodcast: null
+        }
     }
 
+    static async getInitialProps({query, res}) {
+        let idChannel = query.id;
+        try {
+            let [reqChannel, reqAudio, reqSeries] = await Promise.all([
+                fetch(`https://api.audioboom.com/channels/${idChannel}`),
+                fetch(`https://api.audioboom.com/channels/${idChannel}/audio_clips`),
+                fetch(`https://api.audioboom.com/channels/${idChannel}/child_channels`)
+            ]);
+            if (reqChannel.status >= 400) {
+                res.statusCode = reqChannel.status;
+                return {channel: null, audioClips: null, series: null, statusCode: 404}
+            }
+            let dataChannel = await reqChannel.json();
+            let channel = dataChannel.body.channel;
+
+            let dataAudios = await reqAudio.json();
+            let audioClips = dataAudios.body.audio_clips;
+
+            let dataSeries = await reqSeries.json();
+            let series = dataSeries.body.channels;
+
+            return {channel, audioClips, series, statusCode: 200}
+        } catch (e) {
+            return {channel: null, audioClips: null, series: null, statusCode: 503}
+        }
+
+    }
+
+    openPodCast = (event, podcast) => {
+        console.log(event);
+        event.preventDefault();
+        this.setState({
+            openPodcast: podcast
+        });
+    };
+
     render() {
-        const {channel, audioClips, series} = this.props;
+        const {channel, audioClips, series, statusCode} = this.props;
+        const {openPodcast} = this.state;
+        if (statusCode !== 200) {
+            return <Error statusCode={statusCode}/>
+        }
         return (
             <Layout title={`${channel.title}`}>
                 <div className="banner" style={{backgroundImage: `url(${channel.urls.banner_image.original})`}}/>
+
+                {openPodcast && <div>Hay un podcas abierto</div>}
+
                 <h1>{channel.title}</h1>
                 {series.length > 0 &&
                 <div>
@@ -39,7 +68,7 @@ export default class extends React.Component {
                 </div>
                 }
                 <h2>Ultimos Podcasts</h2>
-                <PodcastList podcasts={audioClips}/>
+                <PodcastList2 podcasts={audioClips} onClickPodcast={this.openPodCast} />
 
                 { /*language=SCSS*/}
                 <style jsx>{`

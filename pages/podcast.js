@@ -1,5 +1,6 @@
 import 'isomorphic-fetch'
-import Link from 'next/link'
+import {Link} from '../routes'
+import slug from "../helpers/slug";
 
 export default class extends React.Component {
 
@@ -12,14 +13,17 @@ export default class extends React.Component {
 
     render() {
         const {clip} = this.props;
-
+        // console.log(clip);
         return <div>
             <header>Podcasts</header>
 
             <div className='modal'>
                 <div className='clip'>
                     <nav>
-                        <Link href={`/channel?id=${clip.channel.id}`}>
+                        <Link route="channel" params={{
+                            slug: slug(clip.channel.title),
+                            id: clip.channel.id
+                        }}>
                             <a className='close'>&lt; Volver</a>
                         </Link>
                     </nav>
